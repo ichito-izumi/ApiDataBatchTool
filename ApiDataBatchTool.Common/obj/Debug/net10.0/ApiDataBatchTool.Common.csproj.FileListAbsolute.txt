@@ -1,0 +1,13 @@
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\bin\Debug\net10.0\ApiDataBatchTool.Common.deps.json
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\bin\Debug\net10.0\ApiDataBatchTool.Common.dll
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\bin\Debug\net10.0\ApiDataBatchTool.Common.pdb
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\obj\Debug\net10.0\ApiDataBatchTool.Common.csproj.AssemblyReference.cache
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\obj\Debug\net10.0\ApiDataBatchTool.Common.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\obj\Debug\net10.0\ApiDataBatchTool.Common.AssemblyInfoInputs.cache
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\obj\Debug\net10.0\ApiDataBatchTool.Common.AssemblyInfo.cs
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\obj\Debug\net10.0\ApiDataBatchTool.Common.csproj.CoreCompileInputs.cache
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\obj\Debug\net10.0\ApiDataBatchTool.Common.sourcelink.json
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\obj\Debug\net10.0\ApiDataBatchTool.Common.dll
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\obj\Debug\net10.0\refint\ApiDataBatchTool.Common.dll
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\obj\Debug\net10.0\ApiDataBatchTool.Common.pdb
+C:\Users\ichit\work\ApiDataBatchTool\ApiDataBatchTool.Common\obj\Debug\net10.0\ref\ApiDataBatchTool.Common.dll
