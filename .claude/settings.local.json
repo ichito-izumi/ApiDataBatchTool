@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(del \"C:\\\\Users\\\\ichit\\\\work\\\\ApiDataBatchTool\\\\ApiDataBatchTool.Common\\\\Class1.cs\")",
+      "Bash(Remove-Item -Recurse -Force \"C:\\\\Users\\\\ichit\\\\work\\\\ApiDataBatchTool\\\\ApiDataBatchTool\")",
+      "Bash(tree:*)",
+      "Bash(del \"C:\\\\Users\\\\ichit\\\\work\\\\ApiDataBatchTool\\\\ApiDataBatchTool.BusinessCard\\\\Workers\\\\BusinessCardWorker.cs\")",
+      "Bash(del \"C:\\\\Users\\\\ichit\\\\work\\\\ApiDataBatchTool\\\\ApiDataBatchTool.Office\\\\Workers\\\\OfficeWorker.cs\")",
+      "Bash(dotnet restore:*)"
     ]
   }
 }
