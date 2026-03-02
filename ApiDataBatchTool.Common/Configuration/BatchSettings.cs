@@ -20,4 +20,10 @@ public class BatchSettings
     /// </summary>
     [Range(1, 10000, ErrorMessage = "Batch:MergeBatchSize は1から10000の間で指定してください")]
     public int MergeBatchSize { get; set; } = 1000;
+
+    /// <summary>
+    /// シャットダウンタイムアウト（秒）
+    /// </summary>
+    [Range(5, 600, ErrorMessage = "Batch:ShutdownTimeoutSeconds は5から600の間で指定してください")]
+    public int ShutdownTimeoutSeconds { get; set; } = 60;
 }

@@ -7,13 +7,13 @@ using Microsoft.Extensions.Options;
 namespace ApiDataBatchTool.Common.Workers;
 
 /// <summary>
-/// バッチ処理ワーカー基底クラス
+/// バッチ処理ワーカー
 /// </summary>
 public class BatchWorkerBase : BackgroundService
 {
     private readonly IBatchService _batchService;
     private readonly IHostApplicationLifetime _applicationLifetime;
-    private readonly ILogger _logger;
+    private readonly ILogger<BatchWorkerBase> _logger;
     private readonly BatchSettings _batchSettings;
 
     private int _exitCode;
@@ -21,7 +21,7 @@ public class BatchWorkerBase : BackgroundService
     public BatchWorkerBase(
         IBatchService batchService,
         IHostApplicationLifetime applicationLifetime,
-        ILogger logger,
+        ILogger<BatchWorkerBase> logger,
         IOptions<BatchSettings> batchSettings)
     {
         _batchService = batchService;

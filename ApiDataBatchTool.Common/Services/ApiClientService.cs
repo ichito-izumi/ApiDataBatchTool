@@ -90,7 +90,7 @@ public class ApiClientService<TQueryParams, TDto, TSettings> : IApiClientService
                 page,
                 stopwatch.ElapsedMilliseconds);
 
-            return apiResponse?.Items ?? [];
+            return apiResponse?.SafeItems ?? [];
         }
         catch (HttpRequestException ex)
         {

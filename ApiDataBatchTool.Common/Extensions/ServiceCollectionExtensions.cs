@@ -5,6 +5,8 @@ using ApiDataBatchTool.Common.Workers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 
 namespace ApiDataBatchTool.Common.Extensions;
@@ -37,6 +39,16 @@ public static class ServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        // Graceful Shutdown のタイムアウト設定
+        var shutdownTimeout = configuration
+            .GetSection(BatchSettings.SectionName)
+            .GetValue<int>("ShutdownTimeoutSeconds", 60);
+
+        services.Configure<HostOptions>(options =>
+        {
+            options.ShutdownTimeout = TimeSpan.FromSeconds(shutdownTimeout);
+        });
+
         // DbContext の設定
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
@@ -52,6 +64,35 @@ public static class ServiceCollectionExtensions
 
         // BackgroundService の登録
         services.AddHostedService<BatchWorkerBase>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// API用HttpClientを登録（リトライポリシー付き）
+    /// </summary>
+    /// <typeparam name="TSettings">API設定の型</typeparam>
+    public static IServiceCollection AddApiHttpClient<TSettings>(
+        this IServiceCollection services,
+        IConfiguration configuration)
+        where TSettings : ApiSettingsBase
+    {
+        var apiConfig = configuration.GetSection(ApiSettingsBase.SectionName);
+        var httpClientName = apiConfig.GetValue<string>("HttpClientName")
+            ?? throw new InvalidOperationException("Api:HttpClientName は必須です");
+        var retryCount = apiConfig.GetValue<int>("RetryCount", 3);
+
+        services.AddHttpClient(httpClientName, (sp, client) =>
+        {
+            var apiSettings = sp.GetRequiredService<IOptions<TSettings>>().Value;
+            client.BaseAddress = new Uri(apiSettings.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(apiSettings.TimeoutSeconds);
+        })
+        .AddStandardResilienceHandler(options =>
+        {
+            options.Retry.MaxRetryAttempts = retryCount;
+            options.Retry.Delay = TimeSpan.FromSeconds(2);
+        });
 
         return services;
     }
