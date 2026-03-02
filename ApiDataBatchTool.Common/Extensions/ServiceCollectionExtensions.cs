@@ -1,3 +1,4 @@
+using System;
 using ApiDataBatchTool.Common.Configuration;
 using ApiDataBatchTool.Common.Data;
 using ApiDataBatchTool.Common.Services;
@@ -93,6 +94,35 @@ public static class ServiceCollectionExtensions
             options.Retry.MaxRetryAttempts = retryCount;
             options.Retry.Delay = TimeSpan.FromSeconds(2);
         });
+
+        return services;
+    }
+
+    /// <summary>
+    /// 失敗通知サービスを登録（オプション機能）
+    /// </summary>
+    /// <remarks>
+    /// この機能を有効にするには、appsettings.json に Mail と ExecutionHistory セクションを追加してください
+    /// </remarks>
+    public static IServiceCollection AddFailureNotificationServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        // メール設定の読み込み（バリデーション付き）
+        services.AddOptions<MailSettings>()
+            .Bind(configuration.GetSection(MailSettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // 実行履歴設定の読み込み（バリデーション付き）
+        services.AddOptions<ExecutionHistorySettings>()
+            .Bind(configuration.GetSection(ExecutionHistorySettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // サービスの登録
+        services.AddSingleton<IExecutionHistoryService, ExecutionHistoryService>();
+        services.AddSingleton<IMailService, MailService>();
 
         return services;
     }

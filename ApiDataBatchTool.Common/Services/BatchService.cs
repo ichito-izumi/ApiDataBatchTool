@@ -34,6 +34,21 @@ public class BatchService<TQueryParams, TDto> : IBatchService
         _batchSettings = batchSettings.Value;
     }
 
+    /// <summary>
+    /// 終了コード: API連携エラー（パラメータ取得、API呼び出し）
+    /// </summary>
+    public const int ExitCodeApiError = 1;
+
+    /// <summary>
+    /// 終了コード: キャンセル
+    /// </summary>
+    public const int ExitCodeCancelled = 2;
+
+    /// <summary>
+    /// 終了コード: データベースエラー（MERGE、プロシージャ）
+    /// </summary>
+    public const int ExitCodeDatabaseError = 3;
+
     /// <inheritdoc/>
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
@@ -42,14 +57,19 @@ public class BatchService<TQueryParams, TDto> : IBatchService
         _logger.LogInformation("バッチ処理を開始します: {BatchName}", _batchSettings.BatchName);
         _logger.LogInformation("========================================");
 
+        // 現在のステップ（エラー時の終了コード判定用）
+        var currentStep = 0;
+
         try
         {
             // Step 1: パラメータ取得
+            currentStep = 1;
             cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("[Step 1/4] パラメータを取得します");
             var queryParameters = await _parameterService.GetApiQueryParametersAsync(cancellationToken);
 
             // Step 2: API全ページ取得
+            currentStep = 2;
             cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("[Step 2/4] APIからデータを取得します");
             var items = await _apiClientService.GetAllPagesAsync(queryParameters, cancellationToken);
@@ -63,12 +83,14 @@ public class BatchService<TQueryParams, TDto> : IBatchService
             _logger.LogInformation("APIデータ取得完了: {Count}件", items.Count);
 
             // Step 3: MERGE実行
+            currentStep = 3;
             cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("[Step 3/4] データベースへMERGE処理を実行します");
             var mergedCount = await _repository.MergeAsync(items, cancellationToken);
             _logger.LogInformation("MERGE処理完了: {Count}件", mergedCount);
 
             // Step 4: ストアドプロシージャ実行
+            currentStep = 4;
             cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("[Step 4/4] ストアドプロシージャを実行します");
             await _repository.ExecutePostMergeProcedureAsync(cancellationToken);
@@ -86,13 +108,19 @@ public class BatchService<TQueryParams, TDto> : IBatchService
         {
             stopwatch.Stop();
             _logger.LogWarning("バッチ処理がキャンセルされました: 処理時間={Elapsed}", stopwatch.Elapsed);
-            return 2;
+            return ExitCodeCancelled;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "バッチ処理でエラーが発生しました: 処理時間={Elapsed}", stopwatch.Elapsed);
-            return 1;
+            var exitCode = currentStep >= 3 ? ExitCodeDatabaseError : ExitCodeApiError;
+            _logger.LogError(
+                ex,
+                "バッチ処理でエラーが発生しました: Step={Step}, ExitCode={ExitCode}, 処理時間={Elapsed}",
+                currentStep,
+                exitCode,
+                stopwatch.Elapsed);
+            return exitCode;
         }
     }
 }

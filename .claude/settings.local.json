@@ -12,7 +12,8 @@
       "Bash(dotnet restore:*)",
       "Bash(git rm:*)",
       "Bash(git checkout:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nMerge and remove bin/obj from tracking\n\n- Add .gitignore for .NET projects\n- Remove bin/ and obj/ folders from version control\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

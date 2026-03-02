@@ -16,6 +16,11 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddBatchCommonServices(builder.Configuration);
 
 // ========================================
+// 失敗通知サービスの登録（1回失敗でメール送信）
+// ========================================
+builder.Services.AddFailureNotificationServices(builder.Configuration);
+
+// ========================================
 // 事業所固有の設定（バリデーション付き）
 // ========================================
 builder.Services.AddOptions<ApiSettingsBase>()

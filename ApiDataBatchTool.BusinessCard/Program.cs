@@ -17,6 +17,11 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddBatchCommonServices(builder.Configuration);
 
 // ========================================
+// 失敗通知サービスの登録（2回連続失敗時にメール送信）
+// ========================================
+builder.Services.AddFailureNotificationServices(builder.Configuration);
+
+// ========================================
 // 名刺固有の設定（バリデーション付き）
 // ========================================
 builder.Services.AddOptions<BusinessCardApiSettings>()
