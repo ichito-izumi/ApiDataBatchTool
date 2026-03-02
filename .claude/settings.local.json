@@ -9,7 +9,8 @@
       "Bash(tree:*)",
       "Bash(del \"C:\\\\Users\\\\ichit\\\\work\\\\ApiDataBatchTool\\\\ApiDataBatchTool.BusinessCard\\\\Workers\\\\BusinessCardWorker.cs\")",
       "Bash(del \"C:\\\\Users\\\\ichit\\\\work\\\\ApiDataBatchTool\\\\ApiDataBatchTool.Office\\\\Workers\\\\OfficeWorker.cs\")",
-      "Bash(dotnet restore:*)"
+      "Bash(dotnet restore:*)",
+      "Bash(git rm:*)"
     ]
   }
 }
