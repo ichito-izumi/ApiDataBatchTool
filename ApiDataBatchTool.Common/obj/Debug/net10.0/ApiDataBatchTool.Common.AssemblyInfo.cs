@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ApiDataBatchTool.Common")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4fd84881024c9176465c9423204b07fa382adab0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+65cd8ef13373cc91d03af9e7e2d84d4e11fb9452")]
 [assembly: System.Reflection.AssemblyProductAttribute("ApiDataBatchTool.Common")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ApiDataBatchTool.Common")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

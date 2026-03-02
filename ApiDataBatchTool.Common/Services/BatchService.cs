@@ -45,10 +45,12 @@ public class BatchService<TQueryParams, TDto> : IBatchService
         try
         {
             // Step 1: パラメータ取得
+            cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("[Step 1/4] パラメータを取得します");
             var queryParameters = await _parameterService.GetApiQueryParametersAsync(cancellationToken);
 
             // Step 2: API全ページ取得
+            cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("[Step 2/4] APIからデータを取得します");
             var items = await _apiClientService.GetAllPagesAsync(queryParameters, cancellationToken);
 
@@ -61,11 +63,13 @@ public class BatchService<TQueryParams, TDto> : IBatchService
             _logger.LogInformation("APIデータ取得完了: {Count}件", items.Count);
 
             // Step 3: MERGE実行
+            cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("[Step 3/4] データベースへMERGE処理を実行します");
             var mergedCount = await _repository.MergeAsync(items, cancellationToken);
             _logger.LogInformation("MERGE処理完了: {Count}件", mergedCount);
 
             // Step 4: ストアドプロシージャ実行
+            cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("[Step 4/4] ストアドプロシージャを実行します");
             await _repository.ExecutePostMergeProcedureAsync(cancellationToken);
             _logger.LogInformation("ストアドプロシージャ実行完了");
