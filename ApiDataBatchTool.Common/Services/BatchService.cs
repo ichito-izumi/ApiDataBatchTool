@@ -7,22 +7,22 @@ using Microsoft.Extensions.Options;
 namespace ApiDataBatchTool.Common.Services;
 
 /// <summary>
-/// バッチサービス基底クラス
+/// バッチサービス
 /// </summary>
 /// <typeparam name="TQueryParams">クエリパラメータの型</typeparam>
 /// <typeparam name="TDto">DTOの型</typeparam>
-public abstract class BatchServiceBase<TQueryParams, TDto> : IBatchService
+public class BatchService<TQueryParams, TDto> : IBatchService
     where TQueryParams : ApiQueryParametersBase
 {
     private readonly IParameterService<TQueryParams> _parameterService;
-    private readonly IApiClientService<TQueryParams> _apiClientService;
+    private readonly IApiClientService<TQueryParams, TDto> _apiClientService;
     private readonly IDataRepository<TDto> _repository;
     private readonly ILogger _logger;
     private readonly BatchSettings _batchSettings;
 
-    protected BatchServiceBase(
+    public BatchService(
         IParameterService<TQueryParams> parameterService,
-        IApiClientService<TQueryParams> apiClientService,
+        IApiClientService<TQueryParams, TDto> apiClientService,
         IDataRepository<TDto> repository,
         ILogger logger,
         IOptions<BatchSettings> batchSettings)
@@ -50,7 +50,7 @@ public abstract class BatchServiceBase<TQueryParams, TDto> : IBatchService
 
             // Step 2: API全ページ取得
             _logger.LogInformation("[Step 2/4] APIからデータを取得します");
-            var items = await _apiClientService.GetAllPagesAsync<TDto>(queryParameters, cancellationToken);
+            var items = await _apiClientService.GetAllPagesAsync(queryParameters, cancellationToken);
 
             if (items.Count == 0)
             {

@@ -30,9 +30,10 @@ builder.Services.AddOptions<BusinessCardApiSettings>()
 // HttpClient の設定（リトライポリシー付き）
 // ========================================
 var apiConfig = builder.Configuration.GetSection(ApiSettingsBase.SectionName);
+var httpClientName = apiConfig.GetValue<string>("HttpClientName") ?? "BusinessCardApi";
 var retryCount = apiConfig.GetValue<int>("RetryCount", 3);
 
-builder.Services.AddHttpClient("BusinessCardApi", (sp, client) =>
+builder.Services.AddHttpClient(httpClientName, (sp, client) =>
 {
     var apiSettings = sp.GetRequiredService<IOptions<BusinessCardApiSettings>>().Value;
     client.BaseAddress = new Uri(apiSettings.BaseUrl);
@@ -48,9 +49,9 @@ builder.Services.AddHttpClient("BusinessCardApi", (sp, client) =>
 // 名刺固有サービスの登録
 // ========================================
 builder.Services.AddScoped<IParameterService<BusinessCardQueryParameters>, BusinessCardParameterService>();
-builder.Services.AddScoped<IApiClientService<BusinessCardQueryParameters>, BusinessCardApiClientService>();
+builder.Services.AddScoped<IApiClientService<BusinessCardQueryParameters, BusinessCardDto>, ApiClientService<BusinessCardQueryParameters, BusinessCardDto, BusinessCardApiSettings>>();
 builder.Services.AddScoped<IDataRepository<BusinessCardDto>, BusinessCardRepository>();
-builder.Services.AddScoped<IBatchService, BusinessCardBatchService>();
+builder.Services.AddScoped<IBatchService, BatchService<BusinessCardQueryParameters, BusinessCardDto>>();
 
 // ========================================
 // アプリケーションの実行

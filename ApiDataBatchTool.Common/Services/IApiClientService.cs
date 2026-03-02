@@ -5,14 +5,16 @@ namespace ApiDataBatchTool.Common.Services;
 /// <summary>
 /// APIクライアントサービスインターフェース
 /// </summary>
-public interface IApiClientService<TQueryParams> where TQueryParams : ApiQueryParametersBase
+/// <typeparam name="TQueryParams">クエリパラメータの型</typeparam>
+/// <typeparam name="TDto">DTOの型</typeparam>
+public interface IApiClientService<TQueryParams, TDto>
+    where TQueryParams : ApiQueryParametersBase
 {
     /// <summary>
     /// 全ページのデータを取得する
     /// </summary>
-    /// <typeparam name="T">データ項目の型</typeparam>
     /// <param name="queryParameters">クエリパラメータ</param>
     /// <param name="cancellationToken">キャンセルトークン</param>
     /// <returns>全ページのデータを統合したリスト</returns>
-    Task<List<T>> GetAllPagesAsync<T>(TQueryParams queryParameters, CancellationToken cancellationToken = default);
+    Task<List<TDto>> GetAllPagesAsync(TQueryParams queryParameters, CancellationToken cancellationToken = default);
 }
