@@ -3,43 +3,45 @@ using System.Net.Http.Json;
 using ApiDataBatchTool.Common.Configuration;
 using ApiDataBatchTool.Common.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ApiDataBatchTool.Common.Services;
 
 /// <summary>
-/// APIクライアントサービス基底クラス
+/// APIクライアントサービス
 /// </summary>
-public abstract class ApiClientServiceBase<TQueryParams> : IApiClientService<TQueryParams>
+/// <typeparam name="TQueryParams">クエリパラメータの型</typeparam>
+/// <typeparam name="TDto">DTOの型</typeparam>
+/// <typeparam name="TSettings">設定の型</typeparam>
+public class ApiClientService<TQueryParams, TDto, TSettings> : IApiClientService<TQueryParams, TDto>
     where TQueryParams : ApiQueryParametersBase
+    where TSettings : ApiSettingsBase
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger _logger;
-    private readonly ApiSettingsBase _apiSettings;
-    private readonly string _httpClientName;
+    private readonly ILogger<ApiClientService<TQueryParams, TDto, TSettings>> _logger;
+    private readonly TSettings _apiSettings;
 
-    protected ApiClientServiceBase(
+    public ApiClientService(
         IHttpClientFactory httpClientFactory,
-        ILogger logger,
-        ApiSettingsBase apiSettings,
-        string httpClientName)
+        ILogger<ApiClientService<TQueryParams, TDto, TSettings>> logger,
+        IOptions<TSettings> apiSettings)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
-        _apiSettings = apiSettings;
-        _httpClientName = httpClientName;
+        _apiSettings = apiSettings.Value;
     }
 
     /// <inheritdoc/>
-    public async Task<List<T>> GetAllPagesAsync<T>(TQueryParams queryParameters, CancellationToken cancellationToken = default)
+    public async Task<List<TDto>> GetAllPagesAsync(TQueryParams queryParameters, CancellationToken cancellationToken = default)
     {
-        var allItems = new List<T>();
+        var allItems = new List<TDto>();
         var currentPage = 1;
 
         _logger.LogInformation("API全ページ取得を開始します: Endpoint={Endpoint}", _apiSettings.Endpoint);
 
         while (true)
         {
-            var pageItems = await GetPageAsync<T>(currentPage, queryParameters, cancellationToken);
+            var pageItems = await GetPageAsync(currentPage, queryParameters, cancellationToken);
 
             allItems.AddRange(pageItems);
 
@@ -65,9 +67,9 @@ public abstract class ApiClientServiceBase<TQueryParams> : IApiClientService<TQu
     /// <summary>
     /// 指定ページのデータを取得する
     /// </summary>
-    private async Task<List<T>> GetPageAsync<T>(int page, TQueryParams queryParameters, CancellationToken cancellationToken)
+    private async Task<List<TDto>> GetPageAsync(int page, TQueryParams queryParameters, CancellationToken cancellationToken)
     {
-        var client = _httpClientFactory.CreateClient(_httpClientName);
+        var client = _httpClientFactory.CreateClient(_apiSettings.HttpClientName);
 
         var url = $"{_apiSettings.Endpoint}?page={page}&pageSize={_apiSettings.PageSize}{queryParameters.ToQueryString()}";
 
@@ -80,7 +82,7 @@ public abstract class ApiClientServiceBase<TQueryParams> : IApiClientService<TQu
             var response = await client.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
 
-            var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<T>>(cancellationToken: cancellationToken);
+            var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<TDto>>(cancellationToken: cancellationToken);
 
             stopwatch.Stop();
             _logger.LogInformation(

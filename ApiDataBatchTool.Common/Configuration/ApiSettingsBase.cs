@@ -10,6 +10,12 @@ public class ApiSettingsBase
     public const string SectionName = "Api";
 
     /// <summary>
+    /// HttpClient登録名（DIで使用）
+    /// </summary>
+    [Required(ErrorMessage = "Api:HttpClientName は必須です")]
+    public required string HttpClientName { get; set; }
+
+    /// <summary>
     /// APIのベースURL
     /// </summary>
     [Required(ErrorMessage = "Api:BaseUrl は必須です")]

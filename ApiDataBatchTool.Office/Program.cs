@@ -1,7 +1,6 @@
 using ApiDataBatchTool.Common.Configuration;
 using ApiDataBatchTool.Common.Extensions;
 using ApiDataBatchTool.Common.Services;
-using ApiDataBatchTool.Office.Configuration;
 using ApiDataBatchTool.Office.Data;
 using ApiDataBatchTool.Office.Models;
 using ApiDataBatchTool.Office.Services;
@@ -21,7 +20,7 @@ builder.Services.AddBatchCommonServices(builder.Configuration);
 // ========================================
 // 事業所固有の設定（バリデーション付き）
 // ========================================
-builder.Services.AddOptions<OfficeApiSettings>()
+builder.Services.AddOptions<ApiSettingsBase>()
     .Bind(builder.Configuration.GetSection(ApiSettingsBase.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
@@ -30,11 +29,12 @@ builder.Services.AddOptions<OfficeApiSettings>()
 // HttpClient の設定（リトライポリシー付き）
 // ========================================
 var apiConfig = builder.Configuration.GetSection(ApiSettingsBase.SectionName);
+var httpClientName = apiConfig.GetValue<string>("HttpClientName") ?? "OfficeApi";
 var retryCount = apiConfig.GetValue<int>("RetryCount", 3);
 
-builder.Services.AddHttpClient("OfficeApi", (sp, client) =>
+builder.Services.AddHttpClient(httpClientName, (sp, client) =>
 {
-    var apiSettings = sp.GetRequiredService<IOptions<OfficeApiSettings>>().Value;
+    var apiSettings = sp.GetRequiredService<IOptions<ApiSettingsBase>>().Value;
     client.BaseAddress = new Uri(apiSettings.BaseUrl);
     client.Timeout = TimeSpan.FromSeconds(apiSettings.TimeoutSeconds);
 })
@@ -48,9 +48,9 @@ builder.Services.AddHttpClient("OfficeApi", (sp, client) =>
 // 事業所固有サービスの登録
 // ========================================
 builder.Services.AddScoped<IParameterService<OfficeQueryParameters>, OfficeParameterService>();
-builder.Services.AddScoped<IApiClientService<OfficeQueryParameters>, OfficeApiClientService>();
+builder.Services.AddScoped<IApiClientService<OfficeQueryParameters, OfficeDto>, ApiClientService<OfficeQueryParameters, OfficeDto, ApiSettingsBase>>();
 builder.Services.AddScoped<IDataRepository<OfficeDto>, OfficeRepository>();
-builder.Services.AddScoped<IBatchService, OfficeBatchService>();
+builder.Services.AddScoped<IBatchService, BatchService<OfficeQueryParameters, OfficeDto>>();
 
 // ========================================
 // アプリケーションの実行
