@@ -1,28 +1,28 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace ApiDataBatchTool.Common.Models;
+namespace ApiDataBatchTool.BusinessCard.Models;
 
 /// <summary>
-/// APIレスポンスのラッパー
+/// 名刺APIレスポンス
 /// </summary>
-/// <typeparam name="T">データ項目の型</typeparam>
-public record ApiResponse<T>
+public class BusinessCardApiResponse
 {
     /// <summary>
     /// データ項目のリスト
     /// </summary>
     [JsonPropertyName("items")]
-    public List<T>? Items { get; init; }
+    public List<BusinessCardDto>? Items { get; set; }
 
     /// <summary>
     /// 総件数
     /// </summary>
     [JsonPropertyName("total")]
-    public int Total { get; init; }
+    public int Total { get; set; }
 
     /// <summary>
     /// null安全なItemsアクセサ
     /// </summary>
     [JsonIgnore]
-    public List<T> SafeItems => Items ?? [];
+    public List<BusinessCardDto> SafeItems => Items ?? [];
 }

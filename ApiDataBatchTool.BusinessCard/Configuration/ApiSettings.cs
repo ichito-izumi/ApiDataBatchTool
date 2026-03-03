@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ApiDataBatchTool.Common.Configuration;
+namespace ApiDataBatchTool.BusinessCard.Configuration;
 
 /// <summary>
-/// API接続設定（基底クラス）
+/// 名刺API接続設定
 /// </summary>
-public class ApiSettingsBase
+public class ApiSettings
 {
     public const string SectionName = "Api";
 
@@ -16,17 +16,11 @@ public class ApiSettingsBase
     public required string HttpClientName { get; set; }
 
     /// <summary>
-    /// APIのベースURL
+    /// APIのURL（エンドポイントまで含む完全なURL）
     /// </summary>
     [Required(ErrorMessage = "Api:BaseUrl は必須です")]
     [Url(ErrorMessage = "Api:BaseUrl は有効なURLを指定してください")]
     public required string BaseUrl { get; set; }
-
-    /// <summary>
-    /// APIエンドポイント（相対パス）
-    /// </summary>
-    [Required(ErrorMessage = "Api:Endpoint は必須です")]
-    public required string Endpoint { get; set; }
 
     /// <summary>
     /// 1ページあたりの最大取得件数
@@ -45,4 +39,9 @@ public class ApiSettingsBase
     /// </summary>
     [Range(0, 10, ErrorMessage = "Api:RetryCount は0から10の間で指定してください")]
     public int RetryCount { get; set; } = 3;
+
+    /// <summary>
+    /// 海外フラグ
+    /// </summary>
+    public bool IsOverseas { get; set; } = false;
 }

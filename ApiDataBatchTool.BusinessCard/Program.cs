@@ -1,49 +1,128 @@
+using System;
+using System.IO;
+using ApiDataBatchTool.BusinessCard;
 using ApiDataBatchTool.BusinessCard.Configuration;
-using ApiDataBatchTool.BusinessCard.Data;
-using ApiDataBatchTool.BusinessCard.Models;
-using ApiDataBatchTool.BusinessCard.Services;
 using ApiDataBatchTool.Common.Configuration;
-using ApiDataBatchTool.Common.Extensions;
-using ApiDataBatchTool.Common.Services;
+using ApiDataBatchTool.Common.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
+using Serilog;
+
+// ========================================
+// Serilog 設定
+// ========================================
+var logFolder = Path.Combine(AppContext.BaseDirectory, "log");
+Directory.CreateDirectory(logFolder);
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .WriteTo.File(
+        Path.Combine(logFolder, "log.txt"),
+        rollingInterval: RollingInterval.Infinite,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// ========================================
-// 共通設定とサービスの登録
-// ========================================
-builder.Services.AddBatchCommonServices(builder.Configuration);
+// Serilog をロギングプロバイダーとして設定
+builder.Services.AddSerilog();
 
 // ========================================
-// 失敗通知サービスの登録（2回連続失敗時にメール送信）
+// 設定の読み込み（バリデーション付き）
 // ========================================
-builder.Services.AddFailureNotificationServices(builder.Configuration);
+builder.Services.AddOptions<ApiSettings>()
+    .Bind(builder.Configuration.GetSection(ApiSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
-// ========================================
-// 名刺固有の設定（バリデーション付き）
-// ========================================
-builder.Services.AddOptions<BusinessCardApiSettings>()
-    .Bind(builder.Configuration.GetSection(ApiSettingsBase.SectionName))
+builder.Services.AddOptions<DatabaseSettings>()
+    .Bind(builder.Configuration.GetSection(DatabaseSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<BatchSettings>()
+    .Bind(builder.Configuration.GetSection(BatchSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<CidSettings>()
+    .Bind(builder.Configuration.GetSection(CidSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<MailNotificationSettings>()
+    .Bind(builder.Configuration.GetSection(MailNotificationSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<ExecutionHistorySettings>()
+    .Bind(builder.Configuration.GetSection(ExecutionHistorySettings.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
 // ========================================
-// HttpClient の設定（リトライポリシー付き）
+// シャットダウンタイムアウト設定
 // ========================================
-builder.Services.AddApiHttpClient<BusinessCardApiSettings>(builder.Configuration);
+var shutdownTimeout = builder.Configuration
+    .GetSection(BatchSettings.SectionName)
+    .GetValue<int>("ShutdownTimeoutSeconds", 60);
+
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.ShutdownTimeout = TimeSpan.FromSeconds(shutdownTimeout);
+});
 
 // ========================================
-// 名刺固有サービスの登録
+// DbContext の設定
 // ========================================
-builder.Services.AddScoped<IParameterService<BusinessCardQueryParameters>, BusinessCardParameterService>();
-builder.Services.AddScoped<IApiClientService<BusinessCardQueryParameters, BusinessCardDto>, ApiClientService<BusinessCardQueryParameters, BusinessCardDto, BusinessCardApiSettings>>();
-builder.Services.AddScoped<IDataRepository<BusinessCardDto>, BusinessCardRepository>();
-builder.Services.AddScoped<IBatchService, BatchService<BusinessCardQueryParameters, BusinessCardDto>>();
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+{
+    var dbSettings = sp.GetRequiredService<IOptions<DatabaseSettings>>().Value;
+    options.UseOracle(dbSettings.ConnectionString, oracleOptions =>
+    {
+        oracleOptions.CommandTimeout(dbSettings.CommandTimeoutSeconds);
+    });
+});
+
+// ========================================
+// HttpClient の設定（リトライポリシー付き）
+// ========================================
+var apiConfig = builder.Configuration.GetSection(ApiSettings.SectionName);
+var httpClientName = apiConfig.GetValue<string>("HttpClientName")
+    ?? throw new InvalidOperationException("Api:HttpClientName は必須です");
+var retryCount = apiConfig.GetValue<int>("RetryCount", 3);
+
+builder.Services.AddHttpClient(httpClientName, (sp, client) =>
+{
+    var apiSettings = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
+    client.Timeout = TimeSpan.FromSeconds(apiSettings.TimeoutSeconds);
+})
+.AddStandardResilienceHandler(options =>
+{
+    options.Retry.MaxRetryAttempts = retryCount;
+    options.Retry.Delay = TimeSpan.FromSeconds(2);
+});
+
+// ========================================
+// バッチワーカーの登録
+// ========================================
+builder.Services.AddHostedService<BatchWorker>();
 
 // ========================================
 // アプリケーションの実行
 // ========================================
 var host = builder.Build();
-await host.RunAsync();
+
+try
+{
+    await host.RunAsync();
+}
+finally
+{
+    await Log.CloseAndFlushAsync();
+}

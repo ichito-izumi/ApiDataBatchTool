@@ -1,48 +1,123 @@
+using System;
+using System.IO;
 using ApiDataBatchTool.Common.Configuration;
-using ApiDataBatchTool.Common.Extensions;
-using ApiDataBatchTool.Common.Services;
-using ApiDataBatchTool.Office.Data;
-using ApiDataBatchTool.Office.Models;
-using ApiDataBatchTool.Office.Services;
+using ApiDataBatchTool.Common.Data;
+using ApiDataBatchTool.Office;
+using ApiDataBatchTool.Office.Configuration;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
+using Serilog;
+
+// ========================================
+// Serilog 設定
+// ========================================
+var logFolder = Path.Combine(AppContext.BaseDirectory, "log");
+Directory.CreateDirectory(logFolder);
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .WriteTo.File(
+        Path.Combine(logFolder, "log.txt"),
+        rollingInterval: RollingInterval.Infinite,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// ========================================
-// 共通設定とサービスの登録
-// ========================================
-builder.Services.AddBatchCommonServices(builder.Configuration);
+// Serilog をロギングプロバイダーとして設定
+builder.Services.AddSerilog();
 
 // ========================================
-// 失敗通知サービスの登録（1回失敗でメール送信）
+// 設定の読み込み（バリデーション付き）
 // ========================================
-builder.Services.AddFailureNotificationServices(builder.Configuration);
+builder.Services.AddOptions<ApiSettings>()
+    .Bind(builder.Configuration.GetSection(ApiSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
-// ========================================
-// 事業所固有の設定（バリデーション付き）
-// ========================================
-builder.Services.AddOptions<ApiSettingsBase>()
-    .Bind(builder.Configuration.GetSection(ApiSettingsBase.SectionName))
+builder.Services.AddOptions<DatabaseSettings>()
+    .Bind(builder.Configuration.GetSection(DatabaseSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<BatchSettings>()
+    .Bind(builder.Configuration.GetSection(BatchSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<CidSettings>()
+    .Bind(builder.Configuration.GetSection(CidSettings.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<MailSettings>()
+    .Bind(builder.Configuration.GetSection(MailSettings.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
 // ========================================
-// HttpClient の設定（リトライポリシー付き）
+// シャットダウンタイムアウト設定
 // ========================================
-builder.Services.AddApiHttpClient<ApiSettingsBase>(builder.Configuration);
+var shutdownTimeout = builder.Configuration
+    .GetSection(BatchSettings.SectionName)
+    .GetValue<int>("ShutdownTimeoutSeconds", 60);
+
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.ShutdownTimeout = TimeSpan.FromSeconds(shutdownTimeout);
+});
 
 // ========================================
-// 事業所固有サービスの登録
+// DbContext の設定
 // ========================================
-builder.Services.AddScoped<IParameterService<OfficeQueryParameters>, OfficeParameterService>();
-builder.Services.AddScoped<IApiClientService<OfficeQueryParameters, OfficeDto>, ApiClientService<OfficeQueryParameters, OfficeDto, ApiSettingsBase>>();
-builder.Services.AddScoped<IDataRepository<OfficeDto>, OfficeRepository>();
-builder.Services.AddScoped<IBatchService, BatchService<OfficeQueryParameters, OfficeDto>>();
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+{
+    var dbSettings = sp.GetRequiredService<IOptions<DatabaseSettings>>().Value;
+    options.UseOracle(dbSettings.ConnectionString, oracleOptions =>
+    {
+        oracleOptions.CommandTimeout(dbSettings.CommandTimeoutSeconds);
+    });
+});
+
+// ========================================
+// HttpClient の設定（リトライポリシー付き）
+// ========================================
+var apiConfig = builder.Configuration.GetSection(ApiSettings.SectionName);
+var httpClientName = apiConfig.GetValue<string>("HttpClientName")
+    ?? throw new InvalidOperationException("Api:HttpClientName は必須です");
+var retryCount = apiConfig.GetValue<int>("RetryCount", 3);
+
+builder.Services.AddHttpClient(httpClientName, (sp, client) =>
+{
+    var apiSettings = sp.GetRequiredService<IOptions<ApiSettings>>().Value;
+    client.Timeout = TimeSpan.FromSeconds(apiSettings.TimeoutSeconds);
+})
+.AddStandardResilienceHandler(options =>
+{
+    options.Retry.MaxRetryAttempts = retryCount;
+    options.Retry.Delay = TimeSpan.FromSeconds(2);
+});
+
+// ========================================
+// バッチワーカーの登録
+// ========================================
+builder.Services.AddHostedService<BatchWorker>();
 
 // ========================================
 // アプリケーションの実行
 // ========================================
 var host = builder.Build();
-await host.RunAsync();
+
+try
+{
+    await host.RunAsync();
+}
+finally
+{
+    await Log.CloseAndFlushAsync();
+}

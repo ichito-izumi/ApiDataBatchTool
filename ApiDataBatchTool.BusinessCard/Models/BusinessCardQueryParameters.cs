@@ -1,4 +1,5 @@
-using ApiDataBatchTool.Common.Models;
+using System;
+using System.Collections.Generic;
 
 namespace ApiDataBatchTool.BusinessCard.Models;
 
@@ -11,13 +12,29 @@ public record BusinessCardQueryParameters(
     DateTime? FromDate = null,
     DateTime? ToDate = null,
     bool IsOverseas = false
-) : ApiQueryParametersBase(Cid, CategoryCode, FromDate, ToDate)
+)
 {
-    /// <inheritdoc/>
-    protected override List<string> GetQueryParameters()
+    /// <summary>
+    /// クエリ文字列を生成
+    /// </summary>
+    public string ToQueryString()
     {
-        var parameters = base.GetQueryParameters();
+        var parameters = new List<string>();
+
+        if (!string.IsNullOrEmpty(Cid))
+            parameters.Add($"cid={Uri.EscapeDataString(Cid)}");
+
+        if (!string.IsNullOrEmpty(CategoryCode))
+            parameters.Add($"categoryCode={Uri.EscapeDataString(CategoryCode)}");
+
+        if (FromDate.HasValue)
+            parameters.Add($"fromDate={FromDate.Value:yyyy-MM-dd}");
+
+        if (ToDate.HasValue)
+            parameters.Add($"toDate={ToDate.Value:yyyy-MM-dd}");
+
         parameters.Add($"isOverseas={(IsOverseas ? 1 : 0)}");
-        return parameters;
+
+        return parameters.Count > 0 ? "&" + string.Join("&", parameters) : string.Empty;
     }
 }
