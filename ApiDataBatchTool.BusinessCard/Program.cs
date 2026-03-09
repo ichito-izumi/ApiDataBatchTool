@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using ApiDataBatchTool.BusinessCard;
 using ApiDataBatchTool.BusinessCard.Configuration;
@@ -28,6 +29,13 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 var builder = Host.CreateApplicationBuilder(args);
+
+// コマンドライン引数から環境を設定（--environment Development など）
+builder.Configuration.AddCommandLine(args, new Dictionary<string, string>
+{
+    { "--environment", "DOTNET_ENVIRONMENT" },
+    { "-e", "DOTNET_ENVIRONMENT" }
+});
 
 // Serilog をロギングプロバイダーとして設定
 builder.Services.AddSerilog();
